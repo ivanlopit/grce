@@ -4,6 +4,9 @@ from pathlib import Path
 
 module_folder = Path(__file__).absolute().parent
 
+GRCE_fodler = 'grce'
+
+
 def build_auto_import(repo_root_folder, autoinit_path):
     tree = ET.parse(os.path.join(repo_root_folder, '.repo',  'manifest.xml'))
     root = tree.getroot()
@@ -27,13 +30,29 @@ def prepare_cmake_configs(repo_root_folder):
     tree = ET.parse(os.path.join(repo_root_folder, '.repo',  'manifest.xml'))
     root = tree.getroot()
 
+    grce_path = os.path.join(repo_root_folder, 'grce')
+    if not os.path.isdir(grce_path):
+        os.mkdir(grce_path)
+
+    config = os.path.join(grce_path, 'c')
+    if not os.path.isdir(config):
+        os.mkdir(config)
+
+    build = os.path.join(grce_path, 'b')
+    if not os.path.isdir(build):
+        os.mkdir(build)
+
     for p in root.findall('cmake_config'):
-        args = p.get('args')
+        args = 'cmake ' + p.get('args')
         name = p.get('name')
 
-        with open(name + '.cmd', 'w') as file:
-            file.write(args + ' -B{} -H{}'.format(os.path.join(repo_root_folder,
-                                                               'build_' + name), repo_root_folder))
+        current_b = os.path.join(build, name)
+        if not os.path.isdir(current_b):
+            os.mkdir(current_b)
+        current_c = os.path.join(config, name + '.cmd')
+
+        with open(current_c, 'w') as file:
+            file.write(args + ' -B{} -H{}'.format(current_b, repo_root_folder))
 
 
 def find_repo_properties():
@@ -69,16 +88,22 @@ def condifure_file(src, dst, patterns):
 
 def main(argv):
     size = len(argv)
-    if size == 2 and argv[1] == '--autoconf':
+    if size == 2 and argv[1] == '--configure':
         repo_root_folder, manifest_name = find_repo_properties()
         if repo_root_folder:
             print("Found in {} ".format(repo_root_folder))
 
-            autoimport = os.path.join(module_folder, 'autoimport')
+            autoimport = os.path.join(repo_root_folder, GRCE_fodler)
+
+            if not os.path.isdir(autoimport):
+                os.mkdir(autoimport)
+
+            autoimport = os.path.join(autoimport, 'autoimport')
+
             build_auto_import(repo_root_folder, autoimport)
 
             project_template = os.path.join(
-                module_folder, 'CMakeLists.txt.tmpl')
+                module_folder, 'templates', 'CMakeLists.txt.tmpl')
             project_cmake = os.path.join(repo_root_folder, 'CMakeLists.txt')
 
             autoimport_rel = os.path.relpath(autoimport, repo_root_folder)
